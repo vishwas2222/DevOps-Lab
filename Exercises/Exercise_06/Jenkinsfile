@@ -1,0 +1,50 @@
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Starting Delivery Operations Monitoring pipeline'
+            }
+        }
+
+        stage('Validate Project Files') {
+            steps {
+                sh '''
+                    test -f delivery_metrics.py
+                    test -f requirements.txt
+                    test -f Dockerfile
+                    test -f prometheus.yml
+                    test -f alert_rules.yml
+                    echo "All required project files are present."
+                '''
+            }
+        }
+
+        stage('Validate Python Syntax') {
+            steps {
+                sh '''
+                    python3 -m py_compile delivery_metrics.py
+                    echo "Python syntax validation passed."
+                '''
+            }
+        }
+
+        stage('Pipeline Complete') {
+            steps {
+                echo 'Delivery monitoring pipeline completed successfully.'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build status: SUCCESS'
+        }
+
+        failure {
+            echo 'Build status: FAILURE. Check the console output.'
+        }
+    }
+}

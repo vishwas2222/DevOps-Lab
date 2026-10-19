@@ -1,0 +1,21 @@
+
+groups:
+  - name: delivery-alerts
+    rules:
+      - alert: HighPendingDeliveries
+        expr: pending_deliveries > 10
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: High number of pending deliveries
+          description: Pending deliveries have exceeded 10 for 30 seconds.
+
+      - alert: NoDeliveriesProcessed
+        expr: increase(total_deliveries[1m]) == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: No deliveries processed
+          description: No deliveries were processed during the observation window.
