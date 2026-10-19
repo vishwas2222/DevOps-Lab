@@ -1,224 +1,179 @@
-\# Exercise 07: Introduction to CI and Jenkins Installation
-
-
-
-\## Objective
-
-
-
-Understand the purpose of Continuous Integration (CI), learn the basic concepts of Jenkins, and run Jenkins in a Docker container.
-
-
-
-\## Introduction to Continuous Integration (CI)
-
-
-
-Continuous Integration is a software development practice in which developers frequently integrate code changes into a shared repository. Automated builds and tests help identify integration issues early and provide fast feedback.
-
-
-
-\### Key Features and Benefits
-
-
-
-\- \*\*Frequent Integration:\*\* Developers regularly commit and push changes to a shared repository.
-
-\- \*\*Automated Builds and Tests:\*\* Automated checks validate application changes.
-
-\- \*\*Fast Feedback:\*\* Build and test results help developers identify problems early.
-
-\- \*\*Improved Collaboration and Code Quality:\*\* Integration issues and regressions can be detected sooner.
-
-
-
-\### Typical CI Workflow
-
-
-
-1\. A developer commits and pushes a code change.
-
-2\. The CI server detects the change or receives a configured trigger.
-
-3\. The server builds the application and resolves dependencies.
-
-4\. Automated tests are executed.
-
-5\. Results are reported so developers can address failures.
-
-
-
-Examples of CI/CD tools include Jenkins, GitHub Actions, GitLab CI/CD, CircleCI, and Azure Pipelines.
-
-
-
-\## Introduction to Jenkins
-
-
-
-Jenkins is an open-source automation server used to automate software build, test, and delivery tasks. It supports CI/CD workflows and can be extended through plugins.
-
-
-
-\### Key Jenkins Concepts
-
-
-
-\- \*\*Job:\*\* A configured task that Jenkins executes.
-
-\- \*\*Build:\*\* An execution of a job or pipeline.
-
-\- \*\*Pipeline:\*\* A sequence of automated steps used to build, test, and deliver software.
-
-\- \*\*Plugins:\*\* Extensions that add integrations and capabilities.
-
-\- \*\*Nodes and Agents:\*\* Machines or environments that execute build tasks.
-
-
-
-\## Jenkins Installation Using Docker
-
-
-
-\### 1. Start the Jenkins Container
-
-
-
-Run the following command:
-
-
-
-```cmd
-
-docker run -d --name jenkins -p 8080:8080 -p 50000:50000 jenkins/jenkins:lts
-
+# Exercise 06: Real-Time Operations Monitoring and Alerting
+
+## Objective
+
+Build a real-time delivery operations monitoring system using Python, Docker, Prometheus, Grafana, and Jenkins to monitor delivery activity, collect metrics, visualize operational data, and define alerts.
+
+## Tools Used
+
+- Python
+- Docker Desktop
+- Prometheus
+- Grafana
+- Jenkins Pipeline
+
+## Project Structure
+
+```text
+Exercise_06/
+├── delivery_metrics.py
+├── requirements.txt
+├── Dockerfile
+├── prometheus.yml
+├── alert_rules.yml
+├── Jenkinsfile
+├── README.md
+└── screenshots/
 ```
 
+## Step 1: Python Application
 
+The Python application simulates delivery activity and exposes Prometheus metrics.
 
-The `-d` option runs the container in the background. Port `8080` exposes the Jenkins web interface, while port `50000` is used for inbound agent connections.
+**Metrics endpoint:** http://localhost:8000/metrics
 
+### Metrics Collected
 
+- `total_deliveries` — total number of deliveries processed.
+- `pending_deliveries` — current number of pending deliveries.
+- `on_the_way_deliveries` — number of deliveries currently on the way.
+- `average_delivery_time` — histogram of delivery processing times.
 
-Verify that the container is running:
+### Install Dependencies
 
-
-
-```cmd
-
-docker ps
-
-```
-
-
-
-\### 2. Retrieve the Initial Administrator Password
-
-
-
-Run the following command in Windows CMD:
-
-
+Run these commands from the `Exercise_06` directory:
 
 ```cmd
-
-docker exec jenkins cat /var/jenkins\_home/secrets/initialAdminPassword
-
+python -m pip install -r requirements.txt
 ```
 
+### Run the Application Locally
 
+```cmd
+python delivery_metrics.py
+```
 
-Copy the displayed password for the Jenkins setup wizard.
+Verify the application:
 
+```cmd
+curl.exe http://localhost:8000/
+curl.exe http://localhost:8000/metrics
+```
 
+## Step 2: Docker Container
 
-\### 3. Unlock Jenkins
+The Dockerfile packages the Python application and its dependencies into a Docker image.
 
+### Build the Image
 
+```cmd
+docker build -t delivery-metrics .
+```
 
-Open the following URL in a browser:
+### Run the Container
 
+```cmd
+docker run -d --name delivery-metrics -p 8000:8000 delivery-metrics
+```
 
+### Verify the Metrics Endpoint
 
-http://localhost:8080
+```cmd
+curl.exe http://localhost:8000/metrics
+```
 
+The response should contain the application metrics.
 
+## Step 3: Prometheus Monitoring
 
-Enter the initial administrator password in the \*\*Administrator password\*\* field and select \*\*Continue\*\*.
+Prometheus collects delivery metrics at five-second intervals. Its configuration is stored in `prometheus.yml`.
 
+### Start Prometheus
 
+Run this command from the `Exercise_06` directory:
 
-\### 4. Install Suggested Plugins
+```cmd
+docker run -d --name prometheus -p 9090:9090 -v "%cd%\prometheus.yml:/etc/prometheus/prometheus.yml:ro" -v "%cd%\alert_rules.yml:/etc/prometheus/alert_rules.yml:ro" prom/prometheus
+```
 
+### Access Prometheus
 
+http://localhost:9090
 
-Select \*\*Install suggested plugins\*\* and wait for the installation to complete.
+Open **Status → Targets** to check whether the delivery metrics target is being scraped successfully.
 
+## Step 4: Alert Rules
 
+The `alert_rules.yml` file defines alerts for delivery operations.
 
-\### 5. Create the Administrator User
+### HighPendingDeliveries
 
+Triggers when `pending_deliveries` remains above 10 for 30 seconds.
 
+### NoDeliveriesProcessed
 
-Complete the \*\*Create First Admin User\*\* form with the required account details and continue.
+Triggers when the increase in `total_deliveries` over a one-minute window is zero for one minute.
 
+Alert rules can be inspected on the Prometheus Alerts page.
 
+## Step 5: Grafana Dashboard
 
-\### 6. Configure the Jenkins Instance
+Grafana visualizes the metrics collected by Prometheus.
 
+### Start Grafana
 
+```cmd
+docker run -d --name grafana -p 3000:3000 grafana/grafana
+```
 
-Complete the instance configuration page when prompted and finish the initial setup.
+### Access Grafana
 
+http://localhost:3000
 
+Configure Prometheus as a data source using this URL when Grafana runs in Docker Desktop:
 
-\### 7. Verify the Jenkins Dashboard
+```text
+http://host.docker.internal:9090
+```
 
+### Dashboard Configuration
 
+Create a dashboard named **Delivery Operations Monitoring** with four Stat panels.
 
-After completing the setup, confirm that the Jenkins dashboard loads successfully.
+| Panel | Prometheus query |
+|---|---|
+| Total Deliveries | `total_deliveries` |
+| Pending Deliveries | `pending_deliveries` |
+| On the Way Deliveries | `on_the_way_deliveries` |
+| Average Delivery Time | `average_delivery_time_sum / average_delivery_time_count` |
 
+The average delivery time query returns the average observed processing time in seconds, provided at least one observation has been recorded.
 
+## Step 6: Jenkins Pipeline
 
-Jenkins URL:
+The `Jenkinsfile` defines a CI validation pipeline with the following stages:
 
+1. Checkout/start message.
+2. Required project file validation.
+3. Python syntax validation.
+4. Pipeline completion message.
 
+The pipeline requires a Jenkins agent with a POSIX-compatible shell and Python 3 installed.
 
-http://localhost:8080
+**Status:** The Jenkinsfile has been created, but the pipeline has not yet been executed or verified in Jenkins.
 
+## Results
 
+This exercise demonstrates:
 
-\## Results
+- A Python application exposing delivery metrics.
+- Application containerization using Docker.
+- Prometheus metric collection and alert rule configuration.
+- Grafana visualization of delivery operations.
+- A Jenkins pipeline definition for project validation.
 
+The Jenkins pipeline remains unverified until it is executed in a suitable Jenkins environment.
 
+## Screenshots
 
-\- Jenkins was started in a Docker container.
-
-\- The initial administrator password was retrieved from the container.
-
-\- Jenkins was unlocked through the browser.
-
-\- The initial setup and plugin installation were completed.
-
-\- The administrator login was completed.
-
-\- The Jenkins dashboard was opened successfully.
-
-
-
-\## Screenshots
-
-
-
-The `screenshots/` directory contains screenshots documenting the Jenkins container, password retrieval, unlock page, plugin installation, administrator setup, instance configuration, readiness confirmation, dashboard, and version information, where captured.
-
-
-
-\## Conclusion
-
-
-
-This exercise introduced Continuous Integration and the basic concepts of Jenkins. Jenkins was installed using Docker, configured through the browser, and accessed through its dashboard.
-
-
-
+The `screenshots/` directory contains evidence captured during the exercise, including application execution, dependency installation, Docker image and container verification, Prometheus configuration and targets, alert rules, Grafana dashboard creation, the Jenkinsfile, and this README.
