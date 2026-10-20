@@ -1,0 +1,56 @@
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    python3 -m unittest -v test_app.py
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                    mkdir -p python-app-deploy
+                    cp app.py requirements.txt python-app-deploy/
+                '''
+            }
+        }
+
+        stage('Run Application') {
+            steps {
+                sh '''
+                    cd python-app-deploy
+                    nohup python3 app.py > app.log 2>&1 &
+                    APP_PID=$!
+                    sleep 3
+                    kill -0 $APP_PID
+                '''
+            }
+        }
+
+        stage('Test Application') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    python3 -m unittest -v test_app.py
+                '''
+            }
+        }
+    }
+}
